@@ -1,6 +1,5 @@
 name: Python CI Pipeline
 
-# Run on every push and pull request to the main branch
 on:
   push:
     branches: [ main ]
@@ -9,11 +8,13 @@ on:
 
 jobs:
   build-and-test:
-
     runs-on: ubuntu-latest
 
-    steps:
+    defaults:
+      run:
+        working-directory: ./session2/ml-app
 
+    steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -25,22 +26,24 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Note: We point to the requirements file inside the ml-app folder
-        pip install -r session2/ml-app/requirements.txt
+        pip install -r requirements.txt
         pip install flake8 pytest
 
     - name: Lint with flake8
       run: |
-        # We run flake8 from the root, so we point to the folders
-        flake8 session2/ml-app/src/ session2/ml-app/tests/
+        flake8 src/ tests/
 
     - name: Test with pytest
       run: |
-        # We must run pytest from the folder containing the code
-        cd session2/ml-app
         python -m pytest
-
+        
     - name: Build Docker image
       run: |
-        # We build from the root, but point to the Dockerfile's location
-        docker build . --file session2/ml-app/Dockerfile --tag my-app:${{ github.sha }}
+        docker build . --file Dockerfile --tag my-app:${{ github.sha }}
+        docker save my-app:${{ github.sha }} -o my-app-image.tar
+
+    - name: Upload Docker image artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: session2/ml-app/my-app-image.tar
